@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5 mb-5">
+
+    <h2 class="text-center fw-bold">
+        Post an Opportunity
+    </h2>
+
+    <p class="text-center text-muted mt-2">
+        Reach verified students through a trust-first platform.
+    </p>
+
+
+    {% for msg in get_flashed_messages() %}
+        <div class="alert alert-success text-center">
+            {{ msg }}
+        </div>
+    {% endfor %}
+
+
+    <form method="POST" class="col-md-8 mx-auto mt-4">
+
+
+        <!-- Title -->
+        <input type="text"
+               name="title"
+               class="form-control mb-3"
+               placeholder="Opportunity Title"
+               required>
+
+
+        <!-- Type -->
+        <select name="type"
+                class="form-control mb-3"
+                required>
+
+            <option value="">Opportunity Type</option>
+            <option value="Internship">Internship</option>
+            <option value="Job">Job</option>
+            <option value="Challenge">Challenge</option>
+            <option value="Project">Project</option>
+
+        </select>
+
+
+        <!-- Description -->
+        <textarea name="description"
+                  class="form-control mb-3"
+                  rows="4"
+                  placeholder="Opportunity Description"
+                  required></textarea>
+
+
+        <!-- Skills -->
+        <input type="text"
+               name="skills"
+               class="form-control mb-3"
+               placeholder="Required Skills (Comma separated)">
+
+
+        <!-- Task -->
+        <textarea name="task"
+                  class="form-control mb-3"
+                  rows="3"
+                  placeholder="Task (Optional)"></textarea>
+
+
+        <!-- Duration -->
+        <input type="text"
+               name="duration"
+               class="form-control mb-3"
+               placeholder="Duration (Eg: 3 Months)">
+
+
+        <!-- Paid / Unpaid -->
+        <select name="paid"
+                class="form-control mb-3"
+                required>
+
+            <option value="">Paid / Unpaid</option>
+            <option value="Paid">Paid</option>
+            <option value="Unpaid">Unpaid</option>
+
+        </select>
+
+
+        <!-- Contact -->
+        <input type="text"
+               name="contact"
+               class="form-control mb-3"
+               placeholder="Contact Email / Phone"
+               required>
+
+
+        <button class="btn btn-info w-100">
+            Post Opportunity
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

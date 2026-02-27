@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- ================= HERO SECTION ================= -->
+
+<section class="hero text-center">
+    <div class="container">
+
+        <h1>
+            Discover only trusted,
+            relevant career opportunities.
+        </h1>
+
+        <p class="mt-3">
+            TrustNex is a trust-first opportunity network helping students and
+            professionals find verified opportunities.
+        </p>
+
+        <div class="mt-4">
+
+    {% if not current_user.is_authenticated %}
+
+        <!-- Guest -->
+        <a href="/opportunities" class="btn btn-info me-2">
+            Explore Opportunities
+        </a>
+
+        <a href="/post-opportunity" class="btn btn-outline-secondary">
+            Post an Opportunity
+        </a>
+
+    {% else %}
+
+        {% if current_user.role == "student" %}
+
+            <a href="/opportunities" class="btn btn-info">
+                Explore Opportunities
+            </a>
+
+        {% elif current_user.role == "company" %}
+
+            <a href="/post-opportunity" class="btn btn-info">
+                Post an Opportunity
+            </a>
+
+        {% endif %}
+
+    {% endif %}
+
+    </div>
+
+    </div>
+</section>
+
+
+<!-- ================= FEATURES ================= -->
+
+<section class="features py-5">
+
+    <div class="container text-center">
+
+        <h2 class="fw-bold mb-4">What Makes Us Different</h2>
+
+        <div class="row g-4">
+
+            <div class="col-md-3">
+
+                <div class="card h-100 p-3">
+
+                    <i class="bi bi-shield-check fs-1 text-info"></i>
+
+                    <h5 class="mt-3">Trust Score</h5>
+
+                    <p>Verified companies & feedback</p>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-md-3">
+
+                <div class="card h-100 p-3">
+
+                    <i class="bi bi-patch-check fs-1 text-info"></i>
+
+                    <h5 class="mt-3">Verified Companies</h5>
+
+                    <p>Only trusted recruiters</p>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-md-3">
+
+                <div class="card h-100 p-3">
+
+                    <i class="bi bi-cpu fs-1 text-info"></i>
+
+                    <h5 class="mt-3">Smart Matching</h5>
+
+                    <p>AI-based recommendations</p>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-md-3">
+
+                <div class="card h-100 p-3">
+
+                    <i class="bi bi-ban fs-1 text-info"></i>
+
+                    <h5 class="mt-3">No Spam</h5>
+
+                    <p>Quality listings only</p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ================= TRUST SCORE ================= -->
+
+<section class="trust text-white py-5 text-center">
+
+    <div class="container">
+
+        <h2 class="fw-bold">Your Trust Score</h2>
+
+        <h1 class="display-4 mt-3">86 / 100</h1>
+
+        <p class="fs-5">High Trust</p>
+
+    </div>
+
+</section>
+
+
+<!-- ================= CTA ================= -->
+
+<section class="cta py-5 bg-light text-center">
+
+    <div class="container">
+
+        <h2 class="fw-bold mb-4">
+            Trusted by Innovators & Students
+        </h2>
+
+        <a href="#" class="btn btn-info px-4 me-2">
+            Join TrustNex
+        </a>
+
+        <a href="#" class="btn btn-outline-dark px-4">
+            Partner With Us
+        </a>
+
+    </div>
+
+</section>
+
+{% endblock %}

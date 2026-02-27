@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5 mb-5">
+
+    <h2 class="text-center fw-bold">Get Early Access</h2>
+
+    <p class="text-center text-muted mt-2">
+        Join our waitlist for priority access.
+    </p>
+
+    {% for msg in get_flashed_messages() %}
+        <div class="alert alert-info text-center">
+            {{ msg }}
+        </div>
+    {% endfor %}
+
+    <form method="POST" class="col-md-6 mx-auto mt-4">
+
+        <input type="text"
+               name="name"
+               class="form-control mb-3"
+               placeholder="Full Name"
+               required>
+
+        <input type="email"
+               name="email"
+               class="form-control mb-3"
+               placeholder="Email"
+               required>
+
+        <label for="role-select" class="form-label">Role</label>
+        <select id="role-select"
+                name="role"
+                class="form-control mb-3"
+                required>
+
+            <option value="">I am a...</option>
+            <option value="student">Student</option>
+            <option value="company">Company</option>
+
+        </select>
+
+        <input type="text"
+               name="org"
+               class="form-control mb-3"
+               placeholder="College / Company Name (Optional)">
+
+        <button type="submit" class="btn btn-info w-100">
+            Request Early Access
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

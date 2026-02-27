@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2>Admin Panel</h2>
+
+    <h4 class="mt-4">Users</h4>
+    {% for user in users %}
+        <p>{{ user.name }} - {{ user.email }}</p>
+    {% endfor %}
+
+    <hr>
+
+    <h4>Opportunities</h4>
+    {% for op in opportunities %}
+        <p>{{ op.title }} - {{ op.opportunity_type }}</p>
+    {% endfor %}
+
+    <hr>
+
+    <h4>Applications</h4>
+    {% for app in applications %}
+        <p>
+            {{ app.user.name }} → {{ app.opportunity.title }} ({{ app.status }})
+        </p>
+    {% endfor %}
+
+</div>
+
+{% endblock %}

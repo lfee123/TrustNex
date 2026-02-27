@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2 class="fw-bold">
+        Apply for {{ opportunity.title }}
+    </h2>
+
+    {% for msg in get_flashed_messages() %}
+        <div class="alert alert-info mt-3">
+            {{ msg }}
+        </div>
+    {% endfor %}
+
+    <form method="POST" class="mt-4 col-md-6">
+
+        <textarea name="message"
+                  class="form-control mb-3"
+                  rows="4"
+                  placeholder="Why should we select you?"
+                  required></textarea>
+
+        <button class="btn btn-info w-100">
+            Submit Application
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

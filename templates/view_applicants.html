@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2 class="fw-bold">
+        Applicants for {{ opportunity.title }}
+    </h2>
+
+    {% for app in opportunity.applications %}
+
+        <div class="card p-3 mb-3">
+
+            <h5>{{ app.user.name }}</h5>
+
+            <p>{{ app.message }}</p>
+
+            <p>Status:
+                <span class="badge bg-secondary">
+                    {{ app.status }}
+                </span>
+            </p>
+
+            <a href="/approve/{{ app.id }}"
+               class="btn btn-success btn-sm">
+               Approve
+            </a>
+
+            <a href="/reject/{{ app.id }}"
+               class="btn btn-danger btn-sm">
+               Reject
+            </a>
+
+        </div>
+
+    {% else %}
+        <p>No applicants yet.</p>
+    {% endfor %}
+
+</div>
+
+{% endblock %}

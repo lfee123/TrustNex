@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2 class="mb-4">Company Dashboard</h2>
+
+    <div class="row g-4">
+
+        <div class="col-md-6">
+            <div class="card text-center">
+                <h5>Your Opportunities</h5>
+                <h3 class="mt-2">{{ opportunities|length }}</h3>
+                <p class="text-muted small">Total posted</p>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card text-center">
+                <h5>Total Applications</h5>
+                <h3 class="mt-2">{{ total_applications }}</h3>
+                <p class="text-muted small">Across all listings</p>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

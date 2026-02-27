@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5">
+
+    <h2 class="mb-4">Student Dashboard</h2>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+            <div class="card text-center">
+                <h5>Applications</h5>
+                <h3 class="mt-2">{{ applications|length }}</h3>
+                <p class="text-muted small">Total applications submitted</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center">
+                <h5>Accepted</h5>
+                <h3 class="mt-2 text-success">
+                    {{ applications|selectattr("status", "equalto", "accepted")|list|length }}
+                </h3>
+                <p class="text-muted small">Offers received</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center">
+                <h5>Pending</h5>
+                <h3 class="mt-2 text-warning">
+                    {{ applications|selectattr("status", "equalto", "pending")|list|length }}
+                </h3>
+                <p class="text-muted small">Under review</p>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
