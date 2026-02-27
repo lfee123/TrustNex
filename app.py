@@ -53,10 +53,9 @@ def role_required(role):
         return wrapper
 
     return decorator
-# ================= DATABASE MODEL =================
 
 
-# ================= GOOGLE OAUTH =================
+# ================= GOOGLE OAUTH SETUP =================
 
 google_bp = make_google_blueprint(
     client_id=app.config["GOOGLE_OAUTH_CLIENT_ID"],
@@ -66,58 +65,66 @@ google_bp = make_google_blueprint(
         "https://www.googleapis.com/auth/userinfo.profile",
         "https://www.googleapis.com/auth/userinfo.email"
     ],
-    reprompt_select_account=True
+    redirect_to="google_login_callback",
+    reprompt_consent=True
 )
 
+# ✅ REGISTER BLUEPRINT FIRST
+app.register_blueprint(google_bp, url_prefix="/login")
 
-# Override the authorized route
-@google_bp.route("/authorized")
-def google_authorized():
-    print("=== GOOGLE AUTHORIZED ROUTE CALLED ===")
+
+# ================= GOOGLE CALLBACK ROUTE =================
+
+@app.route("/google_callback")
+def google_login_callback():
+    """Handle Google OAuth callback"""
+    
+    print("=== GOOGLE CALLBACK ROUTE CALLED ===")
     
     if not google.authorized:
-        print("Google not authorized")
-        flash("Google authorization failed.")
+        print("❌ Google not authorized")
+        flash("Google authorization failed. Please try again.")
         return redirect(url_for("login"))
 
     try:
         # Get user info from Google
         resp = google.get("/oauth2/v2/userinfo")
-        print(f"Google API response status: {resp.status_code}")
+        print(f"📡 Google API response status: {resp.status_code}")
         
         if not resp.ok:
-            print(f"Failed to get user info from Google: {resp.text}")
-            flash("Failed to get user info from Google.")
+            print(f"❌ Failed to get user info: {resp.text}")
+            flash("Failed to get user information from Google.")
             return redirect(url_for("login"))
 
         info = resp.json()
-        print(f"User info from Google: {info}")
+        print(f"✅ User info received: {info}")
 
         email = info.get("email")
         name = info.get("name")
         
         if not email:
-            print("Email not provided by Google")
-            flash("Email not provided by Google")
+            print("❌ Email not provided by Google")
+            flash("Email not provided by Google.")
             return redirect(url_for("login"))
 
         # Check if user exists
         user = User.query.filter_by(email=email).first()
 
         if not user:
-            print(f"New user detected: {email}")
+            print(f"🆕 New user detected: {email}")
             # Store user info in session and redirect to role selection
             session['google_user_name'] = name
             session['google_user_email'] = email
             flash("Please select your role to complete registration.")
             return redirect(url_for("select_role_google"))
+        
         else:
-            print(f"User already exists: {email}")
+            print(f"👤 Existing user found: {email}")
             # Log in the existing user
             login_user(user, remember=True)
-            print(f"User logged in: {user.email}")
+            print(f"✅ User logged in: {user.email} ({user.role})")
 
-            flash(f"Logged in successfully as {user.email}!")
+            flash(f"Welcome back, {user.name}!")
             
             # Redirect based on role
             if user.role == "student":
@@ -130,16 +137,18 @@ def google_authorized():
                 return redirect(url_for("home"))
         
     except Exception as e:
-        print(f"Error in google_authorized: {str(e)}")
+        print(f"❌ Error in google_callback: {str(e)}")
         import traceback
         traceback.print_exc()
-        flash(f"Error: {str(e)}")
+        flash(f"An error occurred during login: {str(e)}")
         return redirect(url_for("login"))
 
 
-# ✅ NEW ROUTE: Role Selection for Google Sign-up
+# ================= ROLE SELECTION FOR GOOGLE SIGNUP =================
+
 @app.route("/select_role_google", methods=["GET", "POST"])
 def select_role_google():
+    """Allow new Google users to select their role"""
     
     # Check if user info is in session
     if 'google_user_email' not in session:
@@ -153,20 +162,32 @@ def select_role_google():
             flash("Please select a valid role.")
             return redirect(url_for("select_role_google"))
         
-        # Create new user with role
+        # Get user info from session
         name = session.get('google_user_name')
         email = session.get('google_user_email')
         
+        # Check if user already exists (safety check)
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash("Account already exists. Logging you in.")
+            login_user(existing_user, remember=True)
+            session.pop('google_user_name', None)
+            session.pop('google_user_email', None)
+            return redirect(url_for("home"))
+        
         try:
+            # Create new user with role
             new_user = User(
                 name=name,
                 email=email,
-                password="google_login",  # Dummy password for OAuth users
+                password=generate_password_hash("google_oauth_" + email),  # Secure dummy password
                 role=role
             )
             
             db.session.add(new_user)
             db.session.commit()
+            
+            print(f"✅ New user created: {email} as {role}")
             
             # Clear session
             session.pop('google_user_name', None)
@@ -175,7 +196,7 @@ def select_role_google():
             # Log in the user
             login_user(new_user, remember=True)
             
-            flash(f"Welcome {new_user.name}! Your account has been created as {role}.")
+            flash(f"Welcome to TrustNex, {new_user.name}!")
             
             # Redirect based on role
             if role == "student":
@@ -186,7 +207,9 @@ def select_role_google():
                 return redirect(url_for("home"))
                 
         except Exception as e:
-            print(f"Error creating user: {str(e)}")
+            print(f"❌ Error creating user: {str(e)}")
+            import traceback
+            traceback.print_exc()
             flash("Error creating account. Please try again.")
             return redirect(url_for("select_role_google"))
     
@@ -195,9 +218,6 @@ def select_role_google():
     name = session.get('google_user_name')
     return render_template("select_role_google.html", email=email, name=name)
 
-
-# ✅ REGISTER BLUEPRINT
-app.register_blueprint(google_bp, url_prefix="/login")
 
 # ================= NORMAL ROUTES =================
 
@@ -246,50 +266,7 @@ def register():
 
     return render_template("register.html")
 
-# =================APPLY==================
-
-# @app.route("/apply/<int:op_id>", methods=["GET", "POST"])
-# @login_required
-# def apply(op_id):
-
-#     opportunity = Opportunity.query.get_or_404(op_id)
-
-#     if request.method == "POST":
-
-#         message = request.form.get("message")
-
-#         # Prevent duplicate apply
-#         existing = Application.query.filter_by(
-#             user_id=current_user.id,
-#             opportunity_id=op_id
-#         ).first()
-
-#         if existing:
-#             flash("You already applied to this opportunity.")
-#             return redirect(url_for("opportunities"))
-
-#         new_application = Application(
-#             user_id=current_user.id,
-#             opportunity_id=op_id,
-#             message=message
-#         )
-
-#         db.session.add(new_application)
-#         db.session.commit()
-
-#         flash("Application Submitted Successfully!")
-
-#         return redirect(url_for("opportunities"))
-
-#     return render_template(
-#         "apply.html",
-#         opportunity=opportunity
-#     )
-
-# ============APPLY2=============
-
 @app.route("/apply/<int:op_id>")
-# @login_required
 @role_required("student")
 def apply(op_id):
 
@@ -311,9 +288,10 @@ def login():
         password = request.form.get("password")
         role = request.form.get("role")
         user = User.query.filter_by(email=email).first()
+        
         # Check credentials
         if user and check_password_hash(user.password, password):
-            #Role mismatch
+            # Role mismatch check
             if user.role != role:
                 flash("Incorrect role selected.")
                 return redirect(url_for("login"))
@@ -388,7 +366,6 @@ def opportunities():
 # ================= POST OPPORTUNITY =================
 
 @app.route("/post-opportunity", methods=["GET", "POST"])
-# @login_required
 @role_required("company")
 def post_opportunity():
 
@@ -427,7 +404,6 @@ def post_opportunity():
     return render_template("post_opportunity.html")
 
 @app.route("/student-dashboard")
-# @login_required
 @role_required("student")
 def student_dashboard():
 
@@ -446,7 +422,6 @@ def student_dashboard():
 
 
 @app.route("/company-dashboard")
-# @login_required
 @role_required("company")
 def company_dashboard():
 
@@ -521,7 +496,6 @@ def approve(app_id):
     return redirect(request.referrer)
 
 @app.route("/admin")
-# @login_required
 @role_required("admin")
 def admin_panel():
 
