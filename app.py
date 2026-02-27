@@ -138,7 +138,7 @@ def google_authorized():
 
 
 # ✅ NEW ROUTE: Role Selection for Google Sign-up
-@app.route("/select-role-google", methods=["GET", "POST"])
+@app.route("/select_role_google", methods=["GET", "POST"])
 def select_role_google():
     
     # Check if user info is in session
