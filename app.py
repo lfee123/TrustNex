@@ -1,13 +1,13 @@
-from flask import Flask, render_template, redirect, url_for, request, flash
+from flask import Flask, render_template, redirect, url_for, request, flash, session
 from models import db, User, Waitlist, Opportunity, Application
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_dance.contrib.google import make_google_blueprint, google
 import os
 from functools import wraps
-from dotenv import loadenv
+from dotenv import load_dotenv
 
-loadenv()
+load_dotenv()
 # Allow HTTP for OAuth (ONLY for localhost)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
@@ -77,6 +77,7 @@ def google_authorized():
     
     if not google.authorized:
         print("Google not authorized")
+        flash("Google authorization failed.")
         return redirect(url_for("login"))
 
     try:
@@ -104,25 +105,29 @@ def google_authorized():
         user = User.query.filter_by(email=email).first()
 
         if not user:
-            print(f"Creating new user: {email}")
-            user = User(
-                name=name,
-                email=email,
-                password="google_login"
-            )
-            db.session.add(user)
-            db.session.commit()
-            print(f"User created successfully with ID: {user.id}")
+            print(f"New user detected: {email}")
+            # Store user info in session and redirect to role selection
+            session['google_user_name'] = name
+            session['google_user_email'] = email
+            flash("Please select your role to complete registration.")
+            return redirect(url_for("select_role_google"))
         else:
             print(f"User already exists: {email}")
+            # Log in the existing user
+            login_user(user, remember=True)
+            print(f"User logged in: {user.email}")
 
-        # Log in the user
-        login_user(user, remember=True)
-        print(f"User logged in: {user.email}")
-
-        flash("Logged in with Google successfully!")
-        
-        return redirect(url_for("dashboard"))
+            flash(f"Logged in successfully as {user.email}!")
+            
+            # Redirect based on role
+            if user.role == "student":
+                return redirect(url_for("student_dashboard"))
+            elif user.role == "company":
+                return redirect(url_for("company_dashboard"))
+            elif user.role == "admin":
+                return redirect(url_for("admin_panel"))
+            else:
+                return redirect(url_for("home"))
         
     except Exception as e:
         print(f"Error in google_authorized: {str(e)}")
@@ -130,6 +135,65 @@ def google_authorized():
         traceback.print_exc()
         flash(f"Error: {str(e)}")
         return redirect(url_for("login"))
+
+
+# ✅ NEW ROUTE: Role Selection for Google Sign-up
+@app.route("/select-role-google", methods=["GET", "POST"])
+def select_role_google():
+    
+    # Check if user info is in session
+    if 'google_user_email' not in session:
+        flash("Session expired. Please login again.")
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        role = request.form.get("role")
+        
+        if not role or role not in ["student", "company"]:
+            flash("Please select a valid role.")
+            return redirect(url_for("select_role_google"))
+        
+        # Create new user with role
+        name = session.get('google_user_name')
+        email = session.get('google_user_email')
+        
+        try:
+            new_user = User(
+                name=name,
+                email=email,
+                password="google_login",  # Dummy password for OAuth users
+                role=role
+            )
+            
+            db.session.add(new_user)
+            db.session.commit()
+            
+            # Clear session
+            session.pop('google_user_name', None)
+            session.pop('google_user_email', None)
+            
+            # Log in the user
+            login_user(new_user, remember=True)
+            
+            flash(f"Welcome {new_user.name}! Your account has been created as {role}.")
+            
+            # Redirect based on role
+            if role == "student":
+                return redirect(url_for("student_dashboard"))
+            elif role == "company":
+                return redirect(url_for("company_dashboard"))
+            else:
+                return redirect(url_for("home"))
+                
+        except Exception as e:
+            print(f"Error creating user: {str(e)}")
+            flash("Error creating account. Please try again.")
+            return redirect(url_for("select_role_google"))
+    
+    # GET request - show role selection form
+    email = session.get('google_user_email')
+    name = session.get('google_user_name')
+    return render_template("select_role_google.html", email=email, name=name)
 
 
 # ✅ REGISTER BLUEPRINT
@@ -256,6 +320,8 @@ def login():
 
             # ✅ Login user
             login_user(user)
+            
+            flash(f"Logged in successfully as {user.email}!")
 
             # 🔁 Auto redirect based on role
             if user.role == "student":
@@ -301,7 +367,7 @@ def early_access():
         db.session.add(new_user)
         db.session.commit()
 
-        flash("Thanks! We’ll notify you soon.")
+        flash("Thanks! We'll notify you soon.")
         return redirect(url_for("early_access"))
 
     return render_template("early_access.html")
@@ -356,7 +422,7 @@ def post_opportunity():
 
         flash("Opportunity Posted Successfully!")
 
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("company_dashboard"))
 
     return render_template("post_opportunity.html")
 
@@ -391,10 +457,14 @@ def company_dashboard():
     my_opportunities = Opportunity.query.filter_by(
         user_id=current_user.id
     ).all()
+    
+    # Calculate total applications
+    total_applications = sum(len(op.applications) for op in my_opportunities)
 
     return render_template(
         "company_dashboard.html",
-        opportunities=my_opportunities
+        opportunities=my_opportunities,
+        total_applications=total_applications
     )
 
 @app.route("/dashboard")
@@ -508,6 +578,7 @@ def profile():
 @login_required
 def logout():
     logout_user()
+    flash("You have been logged out successfully.")
     return redirect(url_for("home"))
 
 
