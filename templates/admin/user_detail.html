@@ -1,0 +1,344 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ user.name }} - User Detail{% endblock %}
+
+{% block admin_content %}
+
+<!-- Header with Actions -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{{ url_for('admin.users') }}" class="text-muted text-decoration-none mb-2 d-inline-block">
+            <i class="bi bi-arrow-left"></i> Back to Users
+        </a>
+        <h1 class="admin-page-title mb-2">{{ user.name }}</h1>
+        <p class="text-muted">{{ user.email }}</p>
+    </div>
+    <div>
+        {% if user.role != 'admin' %}
+            {% if user.is_suspended %}
+                <form method="POST" action="{{ url_for('admin.activate_user', user_id=user.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Activate this user?')">
+                        <i class="bi bi-check-circle"></i> Activate
+                    </button>
+                </form>
+            {% else %}
+                <form method="POST" action="{{ url_for('admin.suspend_user', user_id=user.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('Suspend this user?')">
+                        <i class="bi bi-x-circle"></i> Suspend
+                    </button>
+                </form>
+            {% endif %}
+            
+            {% if not user.is_verified %}
+                <form method="POST" action="{{ url_for('admin.verify_user', user_id=user.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-info">
+                        <i class="bi bi-patch-check"></i> Verify
+                    </button>
+                </form>
+            {% endif %}
+            
+            <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this user? This action can be reversed.')">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- User Info Cards -->
+<div class="row g-4 mb-4">
+    
+    <!-- Basic Info -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0 fw-bold">User Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Full Name</label>
+                        <p class="fw-semibold">{{ user.name }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Email Address</label>
+                        <p class="fw-semibold">{{ user.email }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Role</label>
+                        <p>
+                            <span class="badge badge-role-{{ user.role }}">
+                                {{ user.role }}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Status</label>
+                        <p>
+                            {% if user.is_suspended %}
+                                <span class="badge bg-danger">Suspended</span>
+                            {% elif user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                            
+                            {% if user.is_verified %}
+                                <span class="badge bg-info">Verified</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Joined Date</label>
+                        <p class="fw-semibold">{{ user.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Last Login</label>
+                        <p class="fw-semibold">
+                            {% if user.last_login %}
+                                {{ user.last_login.strftime('%B %d, %Y at %I:%M %p') }}
+                            {% else %}
+                                Never logged in
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    {% if user.role == 'company' and user.company_name %}
+                    <div class="col-md-12">
+                        <label class="text-muted small">Company Name</label>
+                        <p class="fw-semibold">{{ user.company_name }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-body text-center">
+                <h3 class="fw-bold text-primary">
+                    {% if user.role == 'company' %}
+                        {{ opportunities|length }}
+                    {% else %}
+                        {{ applications|length }}
+                    {% endif %}
+                </h3>
+                <p class="text-muted mb-0 small">
+                    {% if user.role == 'company' %}
+                        Opportunities Posted
+                    {% else %}
+                        Applications Submitted
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body text-center">
+                <h3 class="fw-bold text-warning">{{ reports_made|length }}</h3>
+                <p class="text-muted mb-0 small">Reports Made</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body text-center">
+                <h3 class="fw-bold text-danger">{{ reports_received|length }}</h3>
+                <p class="text-muted mb-0 small">Reports Received</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Change Role -->
+{% if user.role != 'admin' %}
+<div class="card mb-4">
+    <div class="card-header bg-white border-bottom">
+        <h6 class="mb-0 fw-bold">Change Role</h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.change_user_role', user_id=user.id) }}">
+            <div class="row align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">New Role</label>
+                    <select name="role" class="form-select" required>
+                        <option value="student" {% if user.role == 'student' %}selected{% endif %}>Student</option>
+                        <option value="company" {% if user.role == 'company' %}selected{% endif %}>Company</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary" onclick="return confirm('Change user role?')">
+                        Change Role
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Opportunities (if company) -->
+{% if user.role == 'company' and opportunities %}
+<div class="card mb-4">
+    <div class="card-header bg-white border-bottom">
+        <h6 class="mb-0 fw-bold">Posted Opportunities</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Applications</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for opp in opportunities %}
+                    <tr>
+                        <td>{{ opp.title }}</td>
+                        <td>{{ opp.opportunity_type }}</td>
+                        <td><span class="badge badge-status-{{ opp.status }}">{{ opp.status }}</span></td>
+                        <td>{{ opp.applications.count() }}</td>
+                        <td>{{ opp.created_at.strftime('%b %d, %Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.opportunity_detail', opp_id=opp.id) }}" class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Applications (if student) -->
+{% if user.role == 'student' and applications %}
+<div class="card mb-4">
+    <div class="card-header bg-white border-bottom">
+        <h6 class="mb-0 fw-bold">Applications Submitted</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Opportunity</th>
+                        <th>Company</th>
+                        <th>Status</th>
+                        <th>Applied On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td>{{ app.opportunity.title }}</td>
+                        <td>{{ app.opportunity.user.name }}</td>
+                        <td><span class="badge badge-status-{{ app.status }}">{{ app.status }}</span></td>
+                        <td>{{ app.created_at.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Reports -->
+{% if reports_made or reports_received %}
+<div class="row g-4 mb-4">
+    
+    {% if reports_made %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0 fw-bold">Reports Made by User</h6>
+            </div>
+            <div class="card-body">
+                {% for report in reports_made %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <div class="d-flex justify-content-between">
+                        <span class="badge bg-info">{{ report.report_type }}</span>
+                        <small class="text-muted">{{ report.created_at.strftime('%b %d, %Y') }}</small>
+                    </div>
+                    <p class="mb-1 mt-2"><strong>Reason:</strong> {{ report.reason }}</p>
+                    <span class="badge badge-status-{{ report.status }}">{{ report.status }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if reports_received %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0 fw-bold text-danger">Reports Against User</h6>
+            </div>
+            <div class="card-body">
+                {% for report in reports_received %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <div class="d-flex justify-content-between">
+                        <span class="badge bg-danger">{{ report.report_type }}</span>
+                        <small class="text-muted">{{ report.created_at.strftime('%b %d, %Y') }}</small>
+                    </div>
+                    <p class="mb-1 mt-2"><strong>Reason:</strong> {{ report.reason }}</p>
+                    <p class="mb-1 small text-muted">By: {{ report.reporter.name }}</p>
+                    <span class="badge badge-status-{{ report.status }}">{{ report.status }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endif %}
+
+<!-- Admin Activity Log -->
+<div class="card">
+    <div class="card-header bg-white border-bottom">
+        <h6 class="mb-0 fw-bold">Admin Activity Log</h6>
+    </div>
+    <div class="card-body">
+        {% if audit_logs %}
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th>Admin</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in audit_logs %}
+                    <tr>
+                        <td>{{ log.admin_email }}</td>
+                        <td><code>{{ log.action }}</code></td>
+                        <td>{{ log.description|truncate(50) }}</td>
+                        <td>{{ log.created_at.strftime('%b %d, %Y %I:%M %p') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3">No admin actions recorded yet</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

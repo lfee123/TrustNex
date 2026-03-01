@@ -1,1 +1,473 @@
- 
+ {% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard - TrustNex{% endblock %}
+
+{% block admin_content %}
+
+<!-- Dashboard Header -->
+<div class="admin-header mb-5">
+    <h1 class="fw-bold">Admin Dashboard</h1>
+    <p class="text-muted">Welcome back, {{ current_user.name }}. Here's what's happening today.</p>
+</div>
+
+<!-- Key Metrics Grid -->
+<div class="row g-4 mb-5">
+    
+    <!-- Total Users -->
+    <div class="col-md-3">
+        <div class="metric-card card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-muted mb-0">Total Users</h6>
+                    <i class="bi bi-people fs-4 text-primary"></i>
+                </div>
+                <h2 class="fw-bold mb-2">{{ total_users }}</h2>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-success-soft text-success me-2">
+                        <i class="bi bi-arrow-up"></i> +{{ new_users_this_week }}
+                    </span>
+                    <small class="text-muted">this week</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Users -->
+    <div class="col-md-3">
+        <div class="metric-card card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-muted mb-0">Active Users</h6>
+                    <i class="bi bi-check-circle fs-4 text-success"></i>
+                </div>
+                <h2 class="fw-bold mb-2">{{ active_users }}</h2>
+                <div class="d-flex align-items-center">
+                    <span class="text-muted small">{{ suspended_users }} suspended</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Opportunities -->
+    <div class="col-md-3">
+        <div class="metric-card card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-muted mb-0">Opportunities</h6>
+                    <i class="bi bi-briefcase fs-4 text-info"></i>
+                </div>
+                <h2 class="fw-bold mb-2">{{ total_opportunities }}</h2>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-warning-soft text-warning me-2">
+                        {{ pending_opportunities }} pending
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Applications -->
+    <div class="col-md-3">
+        <div class="metric-card card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-muted mb-0">Applications</h6>
+                    <i class="bi bi-file-earmark-text fs-4 text-secondary"></i>
+                </div>
+                <h2 class="fw-bold mb-2">{{ total_applications }}</h2>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-info-soft text-info">
+                        +{{ new_applications_this_week }} this week
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Secondary Metrics -->
+<div class="row g-4 mb-5">
+    
+    <div class="col-md-3">
+        <div class="stat-card card">
+            <div class="card-body text-center">
+                <i class="bi bi-mortarboard-fill fs-3 text-primary mb-2"></i>
+                <h3 class="fw-bold mb-1">{{ students_count }}</h3>
+                <p class="text-muted mb-0 small">Students</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card card">
+            <div class="card-body text-center">
+                <i class="bi bi-building fs-3 text-info mb-2"></i>
+                <h3 class="fw-bold mb-1">{{ companies_count }}</h3>
+                <p class="text-muted mb-0 small">Companies</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card card">
+            <div class="card-body text-center">
+                <i class="bi bi-flag-fill fs-3 text-warning mb-2"></i>
+                <h3 class="fw-bold mb-1">{{ pending_reports }}</h3>
+                <p class="text-muted mb-0 small">Pending Reports</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card card">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle-fill fs-3 text-danger mb-2"></i>
+                <h3 class="fw-bold mb-1">{{ spam_applications }}</h3>
+                <p class="text-muted mb-0 small">Spam Detected</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-4">Quick Actions</h5>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{{ url_for('admin.opportunities', status='pending') }}" class="action-btn">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Review Pending</span>
+                            <span class="badge bg-warning">{{ pending_opportunities }}</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('admin.reports', status='pending') }}" class="action-btn">
+                            <i class="bi bi-flag"></i>
+                            <span>Review Reports</span>
+                            <span class="badge bg-danger">{{ pending_reports }}</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('admin.users', status='suspended') }}" class="action-btn">
+                            <i class="bi bi-person-x"></i>
+                            <span>Suspended Users</span>
+                            <span class="badge bg-secondary">{{ suspended_users }}</span>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('admin.audit_logs') }}" class="action-btn">
+                            <i class="bi bi-journal-text"></i>
+                            <span>Audit Logs</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Section -->
+<div class="row g-4">
+    
+    <!-- Recent Users -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Recent Users</h6>
+                    <a href="{{ url_for('admin.users') }}" class="text-primary small">View All</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-3">
+                                            {{ user.name[0].upper() }}
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">{{ user.name }}</div>
+                                            <small class="text-muted">{{ user.email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge badge-role-{{ user.role }}">
+                                        {{ user.role }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <small class="text-muted">
+                                        {{ user.created_at.strftime('%b %d') }}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Opportunities -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-white border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Recent Opportunities</h6>
+                    <a href="{{ url_for('admin.opportunities') }}" class="text-primary small">View All</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <tbody>
+                            {% for opp in recent_opportunities %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ opp.title|truncate(30) }}</div>
+                                    <small class="text-muted">by {{ opp.user.name }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge badge-status-{{ opp.status }}">
+                                        {{ opp.status }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <small class="text-muted">
+                                        {{ opp.created_at.strftime('%b %d') }}
+                                    </small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Application Stats Row -->
+<div class="row g-4 mt-4">
+    
+    <!-- Application Status Breakdown -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-white border-bottom">
+                <h6 class="mb-0 fw-bold">Application Status Overview</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="status-metric">
+                            <h3 class="text-warning fw-bold">{{ pending_applications }}</h3>
+                            <p class="text-muted mb-0">Pending</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-metric">
+                            <h3 class="text-success fw-bold">{{ approved_applications }}</h3>
+                            <p class="text-muted mb-0">Approved</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-metric">
+                            <h3 class="text-danger fw-bold">{{ rejected_applications }}</h3>
+                            <p class="text-muted mb-0">Rejected</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="status-metric">
+                            <h3 class="text-secondary fw-bold">{{ spam_applications }}</h3>
+                            <p class="text-muted mb-0">Spam</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Recent Reports -->
+{% if recent_reports %}
+<div class="row g-4 mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Recent Reports</h6>
+                    <a href="{{ url_for('admin.reports') }}" class="text-primary small">View All</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Reporter</th>
+                                <th>Type</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in recent_reports %}
+                            <tr>
+                                <td>{{ report.reporter.name }}</td>
+                                <td><span class="badge bg-info">{{ report.report_type }}</span></td>
+                                <td>{{ report.reason }}</td>
+                                <td><span class="badge badge-status-{{ report.status }}">{{ report.status }}</span></td>
+                                <td>{{ report.created_at.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    <a href="{{ url_for('admin.report_detail', report_id=report.id) }}" class="btn btn-sm btn-outline-primary">
+                                        Review
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+/* Custom Dashboard Styles */
+.metric-card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.stat-card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px;
+    border: 2px solid #e7e5e0;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #1a1a1a;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background-color: #f5f4f1;
+    border-color: #2563eb;
+    transform: translateY(-2px);
+}
+
+.action-btn i {
+    font-size: 24px;
+    color: #2563eb;
+}
+
+.badge-role-student {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.badge-role-company {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.badge-role-admin {
+    background-color: #ede9fe;
+    color: #7c3aed;
+}
+
+.badge-status-pending {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.badge-status-approved {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-status-rejected {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-status-flagged {
+    background-color: #fed7aa;
+    color: #9a3412;
+}
+
+.badge-status-resolved {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-status-dismissed {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.bg-success-soft {
+    background-color: #d1fae5;
+}
+
+.bg-warning-soft {
+    background-color: #fef3c7;
+}
+
+.bg-info-soft {
+    background-color: #e0f2fe;
+}
+
+.status-metric {
+    padding: 20px;
+    border-right: 1px solid #e7e5e0;
+}
+
+.status-metric:last-child {
+    border-right: none;
+}
+</style>
+
+{% endblock %}
