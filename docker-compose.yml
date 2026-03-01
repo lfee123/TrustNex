@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  trustnex:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - CLIENT_ID=${CLIENT_ID}
+      - CLIENT_SECRET=${CLIENT_SECRET}
+    volumes:
+      - ./database.db:/app/database.db
+    restart: unless-stopped

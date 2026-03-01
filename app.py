@@ -1,13 +1,19 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, session
-from models import db, User, Waitlist, Opportunity, Application
+from models import db, User, Waitlist, Opportunity, Application, create_admin_user, init_db
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_dance.contrib.google import make_google_blueprint, google
+from datetime import datetime
 import os
 from functools import wraps
 from dotenv import load_dotenv
 
+# Import admin blueprint
+from admin_routes import admin_bp
+from decorators import admin_required, role_required
+
 load_dotenv()
+
 # Allow HTTP for OAuth (ONLY for localhost)
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
@@ -20,8 +26,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["GOOGLE_OAUTH_CLIENT_ID"] = os.environ.get("CLIENT_ID")
 app.config["GOOGLE_OAUTH_CLIENT_SECRET"] = os.environ.get("CLIENT_SECRET")
 
+# Initialize database
 db.init_app(app=app)
 
+# Initialize login manager
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
@@ -31,28 +39,27 @@ login_manager.login_message = "Please login first."
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# ================= RBAC DECORATOR =================
 
-def role_required(role):
+# ================= REGISTER ADMIN BLUEPRINT =================
 
-    def decorator(func):
+app.register_blueprint(admin_bp)
 
-        @wraps(func)
-        def wrapper(*args, **kwargs):
 
-            if not current_user.is_authenticated:
-                flash("Please login first.")
-                return redirect(url_for("login"))
+# ================= CONTEXT PROCESSORS =================
 
-            if current_user.role != role:
-                flash("Access denied.")
-                return redirect(url_for("home"))
-
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
+@app.context_processor
+def inject_admin_stats():
+    """Inject admin statistics into all templates"""
+    if current_user.is_authenticated and current_user.role == 'admin':
+        pending_opportunities = Opportunity.query.filter_by(status='pending', deleted_at=None).count()
+        from models import Report
+        pending_reports = Report.query.filter_by(status='pending').count()
+        
+        return dict(
+            pending_opportunities=pending_opportunities,
+            pending_reports=pending_reports
+        )
+    return dict()
 
 
 # ================= GOOGLE OAUTH SETUP =================
@@ -69,7 +76,6 @@ google_bp = make_google_blueprint(
     reprompt_consent=True
 )
 
-# ✅ REGISTER BLUEPRINT FIRST
 app.register_blueprint(google_bp, url_prefix="/login")
 
 
@@ -87,7 +93,6 @@ def google_login_callback():
         return redirect(url_for("login"))
 
     try:
-        # Get user info from Google
         resp = google.get("/oauth2/v2/userinfo")
         print(f"📡 Google API response status: {resp.status_code}")
         
@@ -107,12 +112,10 @@ def google_login_callback():
             flash("Email not provided by Google.")
             return redirect(url_for("login"))
 
-        # Check if user exists
         user = User.query.filter_by(email=email).first()
 
         if not user:
             print(f"🆕 New user detected: {email}")
-            # Store user info in session and redirect to role selection
             session['google_user_name'] = name
             session['google_user_email'] = email
             flash("Please select your role to complete registration.")
@@ -120,7 +123,6 @@ def google_login_callback():
         
         else:
             print(f"👤 Existing user found: {email}")
-            # Log in the existing user
             login_user(user, remember=True)
             print(f"✅ User logged in: {user.email} ({user.role})")
 
@@ -132,7 +134,7 @@ def google_login_callback():
             elif user.role == "company":
                 return redirect(url_for("company_dashboard"))
             elif user.role == "admin":
-                return redirect(url_for("admin_panel"))
+                return redirect(url_for("admin.dashboard"))
             else:
                 return redirect(url_for("home"))
         
@@ -150,7 +152,6 @@ def google_login_callback():
 def select_role_google():
     """Allow new Google users to select their role"""
     
-    # Check if user info is in session
     if 'google_user_email' not in session:
         flash("Session expired. Please login again.")
         return redirect(url_for("login"))
@@ -162,11 +163,9 @@ def select_role_google():
             flash("Please select a valid role.")
             return redirect(url_for("select_role_google"))
         
-        # Get user info from session
         name = session.get('google_user_name')
         email = session.get('google_user_email')
         
-        # Check if user already exists (safety check)
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash("Account already exists. Logging you in.")
@@ -176,11 +175,10 @@ def select_role_google():
             return redirect(url_for("home"))
         
         try:
-            # Create new user with role
             new_user = User(
                 name=name,
                 email=email,
-                password=generate_password_hash("google_oauth_" + email),  # Secure dummy password
+                password=generate_password_hash("google_oauth_" + email),
                 role=role
             )
             
@@ -189,16 +187,13 @@ def select_role_google():
             
             print(f"✅ New user created: {email} as {role}")
             
-            # Clear session
             session.pop('google_user_name', None)
             session.pop('google_user_email', None)
             
-            # Log in the user
             login_user(new_user, remember=True)
             
             flash(f"Welcome to TrustNex, {new_user.name}!")
             
-            # Redirect based on role
             if role == "student":
                 return redirect(url_for("student_dashboard"))
             elif role == "company":
@@ -213,7 +208,6 @@ def select_role_google():
             flash("Error creating account. Please try again.")
             return redirect(url_for("select_role_google"))
     
-    # GET request - show role selection form
     email = session.get('google_user_email')
     name = session.get('google_user_name')
     return render_template("select_role_google.html", email=email, name=name)
@@ -228,7 +222,6 @@ def home():
 @app.route("/students")
 def students():
     return render_template("students.html")
-
 
 @app.route("/companies")
 def companies():
@@ -274,7 +267,6 @@ def apply(op_id):
         flash("Only students can apply.")
         return redirect(url_for("opportunities"))
 
-    # 🔴 Put your Google Form link here
     google_form_link = "https://forms.gle/YOUR_GOOGLE_FORM_LINK"
 
     return redirect(google_form_link)
@@ -289,29 +281,31 @@ def login():
         role = request.form.get("role")
         user = User.query.filter_by(email=email).first()
         
-        # Check credentials
         if user and check_password_hash(user.password, password):
-            # Role mismatch check
             if user.role != role:
                 flash("Incorrect role selected.")
                 return redirect(url_for("login"))
 
-            # ✅ Login user
+            # Check if account is suspended
+            if user.is_suspended:
+                flash("Your account has been suspended. Please contact support.", "danger")
+                return redirect(url_for("login"))
+
             login_user(user)
+            
+            # Update last login
+            user.last_login = datetime.utcnow()
+            db.session.commit()
             
             flash(f"Logged in successfully as {user.email}!")
 
-            # 🔁 Auto redirect based on role
             if user.role == "student":
                 return redirect(url_for("student_dashboard"))
-
             elif user.role == "company":
                 return redirect(url_for("company_dashboard"))
-
             elif user.role == "admin":
-                return redirect(url_for("admin_panel"))
+                return redirect(url_for("admin.dashboard"))
 
-        # ❌ Invalid credentials
         flash("Invalid Email or Password.")
         return redirect(url_for("login"))
 
@@ -329,7 +323,6 @@ def early_access():
         role = request.form.get("role")
         org = request.form.get("org")
 
-        # Check duplicate email
         existing = Waitlist.query.filter_by(email=email).first()
         if existing:
             flash("You are already on the waitlist!")
@@ -355,8 +348,15 @@ def early_access():
 
 @app.route("/opportunities")
 def opportunities():
-
-    all_ops = Opportunity.query.all()
+    # Only show approved opportunities to non-admins
+    if current_user.is_authenticated and current_user.role == 'admin':
+        all_ops = Opportunity.query.filter_by(deleted_at=None).all()
+    else:
+        all_ops = Opportunity.query.filter_by(
+            status='approved',
+            is_active=True,
+            deleted_at=None
+        ).all()
 
     return render_template(
         "opportunities.html",
@@ -381,9 +381,7 @@ def post_opportunity():
         contact = request.form.get("contact")
 
         new_opportunity = Opportunity(
-
             user_id=current_user.id,
-
             title=title,
             opportunity_type=opp_type,
             description=desc,
@@ -391,13 +389,14 @@ def post_opportunity():
             task=task,
             duration=duration,
             paid=paid,
-            contact=contact
+            contact=contact,
+            status='pending'  # All new opportunities start as pending
         )
 
         db.session.add(new_opportunity)
         db.session.commit()
 
-        flash("Opportunity Posted Successfully!")
+        flash("Opportunity Posted Successfully! It will be reviewed by our admin team.", "success")
 
         return redirect(url_for("company_dashboard"))
 
@@ -433,7 +432,6 @@ def company_dashboard():
         user_id=current_user.id
     ).all()
     
-    # Calculate total applications
     total_applications = sum(len(op.applications) for op in my_opportunities)
 
     return render_template(
@@ -446,12 +444,10 @@ def company_dashboard():
 @login_required
 def dashboard():
 
-    # Applications by this student
     my_applications = Application.query.filter_by(
         user_id=current_user.id
     ).all()
 
-    # Opportunities posted by this company
     my_opportunities = Opportunity.query.filter_by(
         user_id=current_user.id
     ).all()
@@ -468,7 +464,6 @@ def view_applicants(op_id):
 
     opportunity = Opportunity.query.get_or_404(op_id)
 
-    # Security check
     if opportunity.user_id != current_user.id:
         flash("Unauthorized access.")
         return redirect(url_for("dashboard"))
@@ -494,25 +489,6 @@ def approve(app_id):
     flash("Application Approved.")
 
     return redirect(request.referrer)
-
-@app.route("/admin")
-@role_required("admin")
-def admin_panel():
-
-    if current_user.email != "admin@trustnex.com":
-        flash("Admin access only.")
-        return redirect(url_for("home"))
-
-    users = User.query.all()
-    opportunities = Opportunity.query.all()
-    applications = Application.query.all()
-
-    return render_template(
-        "admin.html",
-        users=users,
-        opportunities=opportunities,
-        applications=applications
-    )
 
 @app.route("/reject/<int:app_id>")
 @login_required
@@ -556,7 +532,26 @@ def logout():
     return redirect(url_for("home"))
 
 
+# ================= DATABASE INITIALIZATION =================
+
 if __name__ == "__main__":
     with app.app_context():
+        # Create all tables
         db.create_all()
+        print("✅ Database tables created")
+        
+        # Create default admin user (only if doesn't exist)
+        admin_email = "admin@trustnex.com"
+        admin = User.query.filter_by(email=admin_email).first()
+        
+        if not admin:
+            admin = create_admin_user(
+                email=admin_email,
+                password="adminpass123",  # CHANGE THIS IN PRODUCTION!
+                name="Admin User"
+            )
+            print(f"✅ Default admin created: {admin_email} / adminpass123")
+        else:
+            print(f"ℹ️  Admin user already exists: {admin_email}")
+    
     app.run(debug=True)
